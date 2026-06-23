@@ -219,9 +219,11 @@ def split_df_by_col_type(df,col_types):
 	y_vals_cols = col_types.Column_name[col_types.Type == 'Y_val']
 	x_vals_cols = col_types.Column_name[col_types.Type == 'X_val']
 	# print(x_vals_cols)
+	# print(df)
 	xvals_df = df[x_vals_cols]
 	# print('SUCCESSFUL!!!')
 	weight_cols = col_types.Column_name[col_types.Type == 'Sample_weight']
+	# print(weight_cols)
 	metadata_cols = col_types.Column_name[col_types.Type.isin(['Metadata','X_val_categorical'])]
 	return df[y_vals_cols],xvals_df,df[weight_cols],df[metadata_cols]
 
@@ -428,6 +430,7 @@ def specified_cv_split(split_spec_fname, path_to_folders = '../data', is_morgan 
 
 	for i in range(cv_fold):
 		test_df = cv_splits[i]
+		# print(test_df.columns)
 		train_inds = list(range(cv_fold))
 		train_inds.remove(i)
 		if test_is_valid:
@@ -503,7 +506,7 @@ def yxwm_to_csvs(y, x, w, m, path,settype):
 def train_test_valid_dfs_to_csv(path_to_splits, train_df, valid_df, test_df, path_to_col_types):
 	# Sends the training, validation, and test dataframes to csv as determined by the column types
 	col_types = pd.read_csv(path_to_col_types + '/col_type.csv')
-
+	# print(train_df[:2])
 	y_vals,x_vals,weights,metadata_cols = split_df_by_col_type(train_df,col_types)
 	y_vals_v,x_vals_v,weights_v,metadata_cols_v = split_df_by_col_type(valid_df,col_types)
 	for col in y_vals.columns:
@@ -752,6 +755,7 @@ def make_pred_vs_actual(split_folder, ensemble_size = 5, predictions_done = [], 
 				if 'morgan' in split_folder:
 					arguments = arguments + ['--features_generator','morgan_count']
 				args = chemprop.args.PredictArgs().parse_args(arguments)
+				args.cuda = False
 				preds = chemprop.train.make_predictions(args=args)	
 			# os.rename(path_to_folders+'/trained_model',path_to_folders + '/trained_model_'+str(i))
 				current_predictions = pd.read_csv(data_dir+'/preds.csv')
@@ -1126,7 +1130,8 @@ def analyze_predictions_cv(split_name,pred_split_variables = ['Experiment_ID','L
 		for index, row in preds_vs_actual.iterrows():
 			pred_split_name = ''
 			for vbl in pred_split_variables:
-				pred_split_name = pred_split_name + row[vbl] + '_'
+				# print(row[vbl])
+				pred_split_name = pred_split_name + str(row[vbl]) + '_'
 			pred_split_names.append(pred_split_name[:-1])
 		all_unique = all_unique + list(set(pred_split_names))
 	unique_pred_split_names = set(all_unique)
@@ -1145,7 +1150,7 @@ def analyze_predictions_cv(split_name,pred_split_variables = ['Experiment_ID','L
 		for index, row in preds_vs_actual.iterrows():
 			pred_split_name = ''
 			for vbl in pred_split_variables:
-				pred_split_name = pred_split_name + row[vbl] + '_'
+				pred_split_name = pred_split_name + str(row[vbl]) + '_'
 			pred_split_names.append(pred_split_name[:-1])
 		preds_vs_actual['Prediction_split_name'] = pred_split_names
 		# unique_pred_split_names = set(pred_split_names)
@@ -1427,7 +1432,13 @@ def main(argv):
 			if 'morgan' in split_model_folder:
 					arguments = arguments + ['--features_generator','morgan_count']
 			args = chemprop.args.PredictArgs().parse_args(arguments)
+			print(args)
+			args.cuda = False			# stuck in
+			# commet out
+			import time
+			print(time.time())
 			preds = chemprop.train.make_predictions(args=args)
+			print(time.time())
 			new_df = pd.read_csv('../results/screen_results/'+argv[2]+'_preds'+'/'+screen_name+'/cv_'+str(cv)+'_preds.csv')
 			all_df['smiles'] = new_df.smiles
 			all_df['cv_'+str(cv)+'_pred_delivery'] = new_df.quantified_delivery	
